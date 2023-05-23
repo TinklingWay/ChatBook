@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>動物たちの広場</title>
+  <?!= include('02_css'); ?>
+  <?!= include('03_style'); ?>
+  <base target="_top">
+</head>
+
+<body>
+  <div id="app">
+    <el-container v-loading="screenLoading">
+      <el-aside style="width: 400px; padding: 10px;">
+
+        <div class="card card-info" :style="modelPanelStyle">
+          <div class="card-header">
+            会話モード選択
+          </div>
+          <div class="card-body" style="padding-bottom: 1rem;">
+            <el-switch v-model="langMode" active-text="語感優先" inactive-text="会話内容優先">
+            </el-switch>
+            <el-divider><i class="el-icon-star-on"></i></el-divider>
+            <div style="font-size:12px ; line-height:1em;">
+              <p>会話内容優先：GPTとの会話を英語で行い、都度日本語に翻訳します。よくキャラクターになりきりますが、語感に違和感が出ます。</p>
+              <p>語感優先：GPTとの会話を日本語で行います。会話がより自然な日本語になりますが、キャラクター設定をすぐ忘れます。</p>
+            </div>
+          </div>
+        </div>
+
+        <div v-for="animalType in animalTypes" :key="animalType">
+          <div class="card">
+            <div class="card-header" style="height: 80px;">
+              <el-row>
+
+                <el-col :span="8">
+                  <el-image :src="animals[animalType].image" fit="fit" style="width: 60px; height: 60px"
+                    :alt="animalType">
+                    <div slot="error" class="image-slot">
+                      <i class="el-icon-picture-outline"></i>
+                    </div>
+                  </el-image>
+                </el-col>
+
+                <el-col :span="16">
+                  <div style="font-size:38px; line-height:1.7em;">{{ animals[animalType].name }}
+                  </div>
+                </el-col>
+
+              </el-row>
+            </div>
+
+            <div class="card-body">
+              キャラクター設定<br>
+              <el-input type="textarea" v-model="animals[animalType].description" cols="40"
+                :autosize="{ minRows: 2, maxRows: 4}"></el-input>
+            </div>
+
+            <div class="card-footer" style="height: 50px;text-align: right;">
+              <el-button type="primary" size="small" :disabled="animals[animalType].disabled" v-loading="btnLoading" @click="updateAnimalDescription(animalType)">保存</el-button>
+            </div>
+          </div>
+
+        </div>
+      </el-aside>
+
+      <el-main style="padding: 10px;">
+        <div class="card card-info direct-chat direct-chat-info">
+          <div class="card-header">
+            <h3 class="card-title">Direct Chat</h3>
+          </div>
+          <div class="card-body card-body-chat">
+
+            <div class="messages">
+              <div v-for="msg in messages" :key="msg[0]+msg[1]+msg[2]">
+                <div :class="directChatMsgClass(msg[1])">
+                  <div class="direct-chat-infos clearfix">
+                    <span :class="directChatNameClass(msg[1])">{{ animals[msg[1]].name }}</span>
+                    <span :class="directChatTimestampClass(msg[1])">{{ new Date(msg[0]).toLocaleString('ja-JP', { timeZone:'Asia/Tokyo' }) }}</span>
+                  </div>
+                  <el-image :src="imageUrl(msg[1])" fit="fit" class="direct-chat-img" style="width: 50px; height: 50px"
+                    alt="message user image">
+                    <div slot="error" class="image-slot">
+                      <i class="el-icon-picture-outline"></i>
+                    </div>
+                  </el-image>
+                  <div :class="directChatTextClass(msg[1])">{{ msg[2] }}</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <div class="card-footer">
+            <el-row style="padding: 5px;">
+              <el-col :span="21">
+                <el-input type="textarea" placeholder="話しかけてみてね！" v-model="message">
+                </el-input>
+              </el-col>
+              <el-col :span="3" style="text-align: right;">
+                <el-button type="primary" @click="sendChatMessage" v-loading="btnLoading">送信</el-button>
+              </el-col>
+            </el-row>
+            <el-row style="padding: 5px;">
+              <el-col :span="24" style="text-align: right;">
+                <el-button type="success" @click="autoChat" v-loading="btnLoading">動物たちに自由にお話してもらう</el-button>
+              </el-col>
+            </el-row>
+          </div>
+        </div>
+      </el-main>
+    </el-container>
+  </div>
+
+  <div style="display: none;">
+    <?!= include('04_js'); ?>
+    <?!= include('05_vueApp'); ?>
+  </div>
+</body>
+
+</html>

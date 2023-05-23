@@ -1,0 +1,182 @@
+<script>
+  new Vue({
+    el: '#app', // Vue.jsインスタンスが操作するDOM要素を指定
+    data() { // 初期データを定義
+      return {
+        message: '', // 入力されたメッセージ
+        messages: [], // チャットのメッセージ履歴
+        animalTypes: [
+          'first', 'second', 'third'
+        ],
+        animals: { // 各動物のデータ
+          zero: {
+            name: 'あなた',
+            image: '',
+            description: '',
+            disabled: false,
+          },
+          first: {
+            name: '一人目',
+            image: '',
+            description: '',
+            disabled: false,
+          },
+          second: {
+            name: '二人目',
+            image: '',
+            description: '',
+            disabled: false,
+          },
+          third: {
+            name: '三人目',
+            image: '',
+            description: '',
+            disabled: false,
+          }
+        },
+        bilingualMode: false,
+        langMode: true,
+        screenLoading: true,
+        btnLoading: true,
+      };
+    },
+    watch: {
+      langMode: function (val, oldVal) {
+        const mode = this.bilingualMode == true ? this.langMode : true
+        google.script.run.changeLangMode(mode);
+      },
+      "animals.first.description": function (val, oldVal) {
+        this.handleDescriptionChange(val, oldVal, 'first');
+      },
+      "animals.second.description": function (val, oldVal) {
+        this.handleDescriptionChange(val, oldVal, 'second');
+      },
+      "animals.third.description": function (val, oldVal) {
+        this.handleDescriptionChange(val, oldVal, 'third');
+      },
+    },
+    computed: {
+      modelPanelStyle() {
+        return this.bilingualMode == false ? "display:none;" : ""
+      }
+    },
+    methods: { // 各種メソッドを定義
+      // Image methods
+      imageUrl(animalType) { // 動物のタイプに応じた画像URLを返す
+        return this.animals[animalType.trim()].image;
+      },
+  
+  
+      // Class methods
+      directChatMsgClass(animalType) {
+        return animalType == "zero" ? "direct-chat-msg right" : "direct-chat-msg";
+      },
+      directChatTextClass(animalType) {
+        let colors = {
+          first: "first",
+          second: "second",
+          third: "third",
+          default: "default"
+        };
+        return `direct-chat-text ${colors[animalType]}`;
+      },
+      directChatNameClass(animalType) {
+        return animalType == "zero" ? "direct-chat-name float-right" : "direct-chat-name float-left";
+      },
+      directChatTimestampClass(animalType) {
+        return animalType == "zero" ? "direct-chat-timestamp float-left" : "direct-chat-timestamp float-right";
+      },
+  
+      // Chat methods
+      sendChatMessage() { // チャットメッセージを送信するメソッド
+        this.btnLoading = true;
+        if (this.message.trim()) {
+          this.postMessageAndFetchContents('zero', this.message);
+          this.message = '';
+        }
+        this.startInterval(this.updateChatData);
+      },
+      autoChat() { // 自由に会話してもらうメソッド
+        this.btnLoading = true;
+        google.script.run.getAIContents();
+        this.startInterval(this.updateChatData);
+      },
+      startInterval(callback) {
+        let count = 0;
+        let intervalId = setInterval(() => {
+          callback();
+  
+          count++;
+          if (count >= 9) {
+            clearInterval(intervalId);
+            console.log("Finished executing the interval 6 times");
+          }
+        }, 20 * 1000); // 20秒 = 20,000ミリ秒
+      },
+      postMessageAndFetchContents(animalType, message) {
+        google.script.run.withSuccessHandler(() => {
+          google.script.run.getAIContents();
+          this.btnLoading = false;
+        }).postJaMessage(animalType, message);
+  
+        const now = new Date();
+        this.messages.push([now.toString(), animalType, message]);
+      },
+      updateChatData() { // チャットデータを更新するメソッド
+        this.btnLoading = true;
+        google.script.run.withSuccessHandler((data) => {
+          this.messages = data;
+          this.scrollToBottom();
+          this.btnLoading = false;
+          this.screenLoading = false;
+        }).getChatMessages();
+      },
+      scrollToBottom() {
+        this.$nextTick(() => {
+          const element = document.getElementsByClassName('card-body-chat')[0];
+          element.scrollTop = element.scrollHeight;
+        });
+      },
+  
+      // Animal data methods
+      handleDescriptionChange: function (val, oldVal, animal) {
+        if (val.length > 200) {
+          this.$message({ message: this.animals[animal].name + "のキャラクター設定は200文字以下にしてね！（現在：" + val.length + "文字）", type: 'error' });
+          this.animals[animal].disabled = true;
+        } else {
+          this.animals[animal].disabled = false;
+        }
+      },
+      fetchAnimalData(animalType) { // 動物のデータをフェッチするメソッド
+        let fields = ["名前", "画像", "設定"];
+        let keys = ["name", "image", "description"];
+  
+        fields.forEach((field, index) => {
+          google.script.run.withSuccessHandler((value) => {
+            this.animals[animalType][keys[index]] = value;
+          }).getAnimalData(animalType, field);
+        });
+      },
+      updateAnimalDescription(animalType) { // 動物の説明を更新するメソッド
+        google.script.run.updateAnimalDescription(animalType, this.animals[animalType].description);
+        this.$message({ message: this.animals[animalType].name + 'のキャラクター設定を保存しました！', type: 'success' });
+      }
+    },
+    created() { // Vue.jsインスタンスが生成された時に実行されるメソッド
+      const TEN_MINUTES_IN_MILLISECONDS = 600000;
+  
+      google.script.run.withSuccessHandler((data) => {
+        this.bilingualMode = data === true;
+      }).getSetting("BILINGUAL_MODE");
+  
+      google.script.run.withSuccessHandler((data) => {
+        this.langMode = data == "JA";
+      }).getSetting("LANG_MODE");
+  
+      ["zero", ...this.animalTypes].forEach(animalType => this.fetchAnimalData(animalType));
+  
+      this.updateChatData();
+      setInterval(this.updateChatData, TEN_MINUTES_IN_MILLISECONDS);
+    }
+  });
+  </script>
