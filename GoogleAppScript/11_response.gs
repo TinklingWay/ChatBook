@@ -38,7 +38,14 @@ function getMessages() {
   const chatSheet = SpreadsheetApp.getActive().getSheetByName(SHEET_CHAT);
   const chatData = chatSheet.getDataRange().getValues();
 
-  const chatDataWithTimeStrings = chatData.map(row => [row[0].toISOString(), row[1], row[2], row[3]]);
+  if (chatData.length === 0) {
+    return [];
+  }
+
+  const chatDataWithTimeStrings = chatData
+    .filter(row => row.length >= 4 && row[0])  // only include rows with sufficient data and a timestamp
+    .map(row => [row[0].toISOString(), row[1], row[2], row[3]]);  // transform rows
+
   return chatDataWithTimeStrings.slice(-OPENAI_API_CONVERSATIN_ARRAY_SIZE);
 }
 
@@ -123,17 +130,21 @@ function getAIContents() {
 }
 
 function archiveRows() {
+  const MAX_ROWS = 300;   // 行の上限数
+  const ARCHIVE_ROWS = 100;  // 退避する行数
+  const HEADER_ROWS = 1; // 退避しないヘッダの行
+
   // スプレッドシートの取得
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_CHAT);
 
-  // シートの行数が100行を超えているかチェック
-  if (sheet.getLastRow() > 100) {
-    // シートの1行目からの50行を削除
-    sheet.deleteRows(1, 50);
+  // シートの行数がMAX_ROWS行を超えているかチェック（HEADER_ROWS行目はヘッダーなのでカウントに含まない）
+  if (sheet.getLastRow() > MAX_ROWS + HEADER_ROWS) {
+    // 元のシートからHEADER_ROWS+1行目からのARCHIVE_ROWS行を削除
+    sheet.deleteRows(HEADER_ROWS + 1, ARCHIVE_ROWS);
 
     // 削除した分だけ末尾に行を追加
-    sheet.insertRowsAfter(sheet.getLastRow(), 50);
+    sheet.insertRowsAfter(sheet.getLastRow(), ARCHIVE_ROWS);
   }
 }
 
