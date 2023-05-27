@@ -140,8 +140,8 @@
   
       // Animal data methods
       handleDescriptionChange: function (val, oldVal, animal) {
-        if (val.length > 200) {
-          this.$message({ message: this.animals[animal].name + "のキャラクター設定は200文字以下にしてね！（現在：" + val.length + "文字）", type: 'error' });
+        if (val.length > 500) {
+          this.$message({ message: this.animals[animal].name + "のキャラクター設定は500文字以下にしてね！（現在：" + val.length + "文字）", type: 'error' });
           this.animals[animal].disabled = true;
         } else {
           this.animals[animal].disabled = false;
